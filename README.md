@@ -56,130 +56,136 @@ root
 ...
 ```
 
-## Getting started
+# Getting started
 
-1. To get started you need to install terraform and terragrunt. There's a setup.sh script which will take care of this for you. So if you want just run the following command:
+## 1. Install
+To get started you need to install terraform and terragrunt. There's a setup.sh script which will take care of this for you. So if you want just run the following command:
+```sh
+./setup.sh
+```
+You can find more information here on specifics about terragrunt:
+`https://github.com/gruntwork-io/terragrunt`
 
-  ```sh
-  ./setup.sh
-  ```
+> **NOTE: This script assumes you are running this on a mac.**
 
-  You can find more information here on specifics about terragrunt:
-  `https://github.com/gruntwork-io/terragrunt`
+## 2. Configure AWS
+Setup your aws profile to have the proper credentials. The default setup of this is to use a profile called `dcgapi-dev`. This profile is for the `fbcd-sandbox` account. To continue to use that profile configure your `~/.aws/credentials` file to append the following:
 
-  > **NOTE: This script assumes you are running this on a mac.**
+```
+[dcgapi-dev]
+aws_access_key_id = <PUT ACCESS KEY HERE>
+aws_secret_access_key = <PUT SECRET KEY HERE>
+```
+If you want to use a different profile, just go into the `non-prod/us-east-2` folder and adjust the `common.tfvars` file to have the account id and profile that you want to use.
 
-2. Setup your aws profile to have the proper credentials. The default setup of this is to use a profile called `dcgapi-dev`. This profile is for the `fbcd-sandbox` account. To continue to use that profile configure your `~/.aws/credentials` file to append the following:
+> **NOTE: Ensure that you haven't exported any AWS credentials into you bash shell. Otherwise those will take precedence.**
 
-  ```
-  [dcgapi-dev]
-  aws_access_key_id = <PUT ACCESS KEY HERE>
-  aws_secret_access_key = <PUT SECRET KEY HERE>
-  ```
+## 3. Install common components
+If this is the first time you are running this, you'll want to setup the common folder first (ie. vpc, etc..) as the other environments need that to work.
 
-  If you want to use a different profile, just go into the `non-prod/us-east-2` folder and adjust the `common.tfvars` file to have the account id and profile that you want to use.
+If you want to setup these items in a different region, then copy the region folder to a new folder (named for your region) and change the region parameter in the `non-prod/<new_region_name>/common.tfvars` file.
 
-  > **NOTE: Ensure that you haven't exported any AWS credentials into you bash shell. Otherwise those will take precedence.**
+When you are ready run the following commands:
 
-3. If this is the first time you are running this, you'll want to setup the common folder first (ie. vpc, etc..) as the other environments need that to work.
+```sh
+cd non-prod/us-east-2/common
+# first check your work
+terragrunt plan-all
+# if you like the result
+terragrunt apply-all
+```
+> **NOTE: Sometimes terragrunt asks you about three things (or more) at once. You have to say yes as many times as it asks even if the prompt doesn't quite look like that's what it is doing. That only happens the first time.**
 
-  If you want to setup these items in a different region, then copy the region folder to a new folder (named for your region) and change the region parameter in the `non-prod/<new_region_name>/common.tfvars` file.
+If you want to run terragrunt against your local files (not the git repo), then you will have to run the commands in each folder as you can't use that method with the plan-all. Instead, do the following:
 
-  When you are ready run the following commands:
+```sh
+cd non-prod/us-east-2/common/network
+# first check your work
+terragrunt plan --terragrunt-source ../../../../../sample-tf-modules//network
+# if you like the result
+terragrunt apply --terragrunt-source ../../../../../sample-tf-modules//network
+```
 
-  ```sh
-  cd non-prod/us-east-2/common
-  # first check your work
-  terragrunt plan_all
-  # if you like the result
-  terragrunt apply_all
-  ```
+> **NOTE: The common.tfvars assumes you are using a specific keypair. If you don't have that keypair, then change the value to one that you do have.**
 
-  If you want to run terragrunt against your local files (not the git repo), then you will have to run the commands in each folder as you can't use that method with the plan-all. Instead, do the following:
+## 4. Install other components
+Next, let's setup the database, consul, ECS cluster, and load balancer. We assume that there is one of those per environment. There's no reason there could be more (or one per VPC), but that's how this is configured for now. For this example, we'll setup the `dev` environment.
 
-  ```sh
-  cd non-prod/us-east-2/common/network
-  # first check your work
-  terragrunt plan --terragrunt-source ../../../../../sample-tf-modules//network
-  # if you like the result
-  terragrunt apply --terragrunt-source ../../../../../sample-tf-modules//network
-  ```
+```sh
+cd non-prod/us-east-2/dev
+# first check your work
+terragrunt plan-all
+# if you like the result
+terragrunt apply-all
+```
 
-  > **NOTE: The common.tfvars assumes you are using a specific keypair. If you don't have that keypair, then change the value to one that you do have.**
+Again, if you want to use local files instead of the git repo, you can follow the example above for each folder. There are dependencies between the modules if you go this route though, so run them in the following order:
 
-4. Next, let's setup the database, consul, ECS cluster, and load balancer. We assume that there is one of those per environment. There's no reason there could be more (or one per VPC), but that's how this is configured for now. For this example, we'll setup the `dev` environment.
+```sh
+cd non-prod/us-east-2/dev/consul
+terragrunt plan --terragrunt-source ../../../../../sample-tf-modules//consul
+cd ../data_storage
+terragrunt plan --terragrunt-source ../../../../../sample-tf-modules//data_storage
+cd ../service_cluster
+terragrunt plan --terragrunt-source ../../../../../sample-tf-modules//service_cluster
+```
 
-  ```sh
-  cd non-prod/us-east-2/dev
-  # first check your work
-  terragrunt plan_all
-  # if you like the result
-  terragrunt apply_all
-  ```
+If you want to use a different environment or add a new one, then copy all of the dev files to a new environment folder, and change the `<env_name>/env.tfvars` and `<env_name>/terraform.tfvars` value accordingly.
 
-  Again, if you want to use local files instead of the git repo, you can follow the example above for each folder. There are dependencies between the modules if you go this route though, so run them in the following order:
+## 5. Build Service
+Now we can run terragrunt from the actual service. Let's go to the hello-service and prepare it to be built.
 
-  ```sh
-  cd non-prod/us-east-2/dev/consul
-  terragrunt plan --terragrunt-source ../../../../../sample-tf-modules//consul
-  cd ../data_storage
-  terragrunt plan --terragrunt-source ../../../../../sample-tf-modules//data_storage
-  cd ../service_cluster
-  terragrunt plan --terragrunt-source ../../../../../sample-tf-modules//service_cluster
-  ```
+**TODO: show how to build service**
 
-  If you want to use a different environment or add a new one, then copy all of the dev files to a new environment folder, and change the `<env_name>/env.tfvars` and `<env_name>/terraform.tfvars` value accordingly.
+For now, I'm not detailing how to build a docker image and how to push it into ECR (or docker hub) nor did I actually do that, so these services won't actually run since they have no real images. However, I suspect you already know how to do that. The important part is that you can choose the image in your task definition. These are defined in the service repos themselves in each of the folders that match up with the service. They are defined per region currently, but there's no reason they couldn't be defined at each version level.
 
-5. Now we can run terragrunt from the actual service. Let's go to the hello-service and prepare it to be built.
+```yaml
+# in <service>/tf/<account>/<region>/common.tfvars
+docker_image = "776609208984.dkr.ecr.us-east-2.amazonaws.com/hello-service"
+```
 
-  **TODO: show how to build service**
+The docker tag is defined inside the deploy file at each version. Of course, you can override the docker_image here too if you needed to.
 
-  For now, I'm not detailing how to build a docker image and how to push it into ECR (or docker hub) nor did I actually do that, so these services won't actually run since they have no real images. However, I suspect you already know how to do that. The important part is that you can choose the image in your task definition. These are defined in the service repos themselves in each of the folders that match up with the service. They are defined per region currently, but there's no reason they couldn't be defined at each version level.
+```yaml
+# in  <service>/tf/<account>/<region>/<env>/<tag>/<version>/deploy.tfvars
+docker_tag = "v1.2.3"
+# docker_image = "776609208984.dkr.ecr.us-east-2.amazonaws.com/hello-service-v1a"
+```
 
-  ```yaml
-  # in <service>/tf/<account>/<region>/common.tfvars
-  docker_image = "776609208984.dkr.ecr.us-east-2.amazonaws.com/hello-service"
-  ```
+This will obviously result in a task definition that looks like:
 
-  The docker tag is defined inside the deploy file at each version. Of course, you can override the docker_image here too if you needed to.
+```js
+{
+  ...
+  "image": "776609208984.dkr.ecr.us-east-2.amazonaws.com/hello-service:v1.2.3",
+  ...
+}
+```
 
-  ```yaml
-  # in  <service>/tf/<account>/<region>/<env>/<tag>/<version>/deploy.tfvars
-  docker_tag = "v1.2.3"
-  # docker_image = "776609208984.dkr.ecr.us-east-2.amazonaws.com/hello-service-v1a"
-  ```
+## 6. Deploy hello service
+So...let's actually deploy the hello service. There are a couple options here. Starting from the root folder of the hello-service repo, if you want to deploy all of the dev services for hello you can simply start by going into the dev folder. Then, run `terragrunt plan-all` to first see the results and `terragrunt apply-all` to make it so. Similarly, you can do that from any folder to deploy as many or as few services as you want. Some examples:
 
-  This will obviously result in a task definition that looks like:
+```sh
+# from hello-service repo
+# to deploy EVERYTHING (all versions) in the us-east-2 region
+cd tf/non-prod/us-east-2
+terragrunt plan-all
 
-  ```js
-  {
-    ...
-    "image": "776609208984.dkr.ecr.us-east-2.amazonaws.com/hello-service:v1.2.3",
-    ...
-  }
-  ```
+# to deploy all of the dev services (v1 blue, v1 green, and v2 blue)
+cd tf/non-prod/us-east-2/dev
+terragrunt plan-all
 
-6. So...let's actually deploy the hello service. There are a couple options here. Starting from the root folder of the hello-service repo, if you want to deploy all of the dev services for hello you can simply start by going into the dev folder. Then, run `terragrunt plan-all` to first see the results and `terragrunt apply-all` to make it so. Similarly, you can do that from any folder to deploy as many or as few services as you want. Some examples:
+# to deploy just v1 services (v1 blue and v1 green)
+cd tf/non-prod/us-east-2/dev/v1
+terragrunt plan-all
 
-  ```sh
-  # from hello-service repo
-  # to deploy EVERYTHING (all versions) in the us-east-2 region
-  cd tf/non-prod/us-east-2
-  terragrunt plan-all
+# and finally, to deploy just blue v1 in dev (only v1 blue)
+cd tf/non-prod/us-east-2/dev/v1/blue
+terragrunt plan
+```
 
-  # to deploy all of the dev services (v1 blue, v1 green, and v2 blue)
-  cd tf/non-prod/us-east-2/dev
-  terragrunt plan-all
+## 7. Deploy world Service
+The world service works exactly the same way, except that it uses a redis cluster as well. Note that this is never defined in any environment variables. This is retrieved directly from the environment state file. The only differences here are the deploy settings, and the common variables to make them match the service name.
 
-  # to deploy just v1 services (v1 blue and v1 green)
-  cd tf/non-prod/us-east-2/dev/v1
-  terragrunt plan-all
-
-  # and finally, to deploy just blue v1 in dev (only v1 blue)
-  cd tf/non-prod/us-east-2/dev/v1/blue
-  terragrunt plan
-  ```
-
-7. The world service works exactly the same way, except that it uses a redis cluster as well. Note that this is never defined in any environment variables. This is retrieved directly from the environment state file. The only differences here are the deploy settings, and the common variables to make them match the service name.
-
-8. Last but not least you can destroy elements the same way, by reversing the steps above and using `terragrunt destroy-all` from the appropriate folders.
+## 8. Destroy it
+Last but not least you can destroy elements the same way, by reversing the steps above and using `terragrunt destroy-all` from the appropriate folders.
