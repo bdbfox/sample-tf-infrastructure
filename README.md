@@ -69,7 +69,7 @@ root
 
   > **NOTE: This script assumes you are running this on a mac.**
 
-* Setup your aws profile to have the proper credentials. The default setup of this is to use a profile called `dcgapi-dev`. This profile is for the `fbcd-sandbox` account. To continue to use that profile configure your `~/.aws/credentials` file to append the following:
+2. Setup your aws profile to have the proper credentials. The default setup of this is to use a profile called `dcgapi-dev`. This profile is for the `fbcd-sandbox` account. To continue to use that profile configure your `~/.aws/credentials` file to append the following:
 
   ```
   [dcgapi-dev]
@@ -81,7 +81,7 @@ root
 
   > **NOTE: Ensure that you haven't exported any AWS credentials into you bash shell. Otherwise those will take precedence.**
 
-* If this is the first time you are running this, you'll want to setup the common folder first (ie. vpc, etc..) as the other environments need that to work.
+3. If this is the first time you are running this, you'll want to setup the common folder first (ie. vpc, etc..) as the other environments need that to work.
 
   If you want to setup these items in a different region, then copy the region folder to a new folder (named for your region) and change the region parameter in the `non-prod/<new_region_name>/common.tfvars` file.
 
@@ -107,7 +107,7 @@ root
 
   > **NOTE: The common.tfvars assumes you are using a specific keypair. If you don't have that keypair, then change the value to one that you do have.**
 
-* Next, let's setup the database, consul, ECS cluster, and load balancer. We assume that there is one of those per environment. There's no reason there could be more (or one per VPC), but that's how this is configured for now. For this example, we'll setup the `dev` environment.
+4. Next, let's setup the database, consul, ECS cluster, and load balancer. We assume that there is one of those per environment. There's no reason there could be more (or one per VPC), but that's how this is configured for now. For this example, we'll setup the `dev` environment.
 
   ```sh
   cd non-prod/us-east-2/dev
@@ -130,7 +130,7 @@ root
 
   If you want to use a different environment or add a new one, then copy all of the dev files to a new environment folder, and change the `<env_name>/env.tfvars` and `<env_name>/terraform.tfvars` value accordingly.
 
-* Now we can run terragrunt from the actual service. Let's go to the hello-service and prepare it to be built.
+5. Now we can run terragrunt from the actual service. Let's go to the hello-service and prepare it to be built.
 
   **TODO: show how to build service**
 
@@ -158,7 +158,8 @@ root
     ...
   }
   ```
-* So...let's actually deploy the hello service. There are a couple options here. Starting from the root folder of the hello-service repo, if you want to deploy all of the dev services for hello you can simply start by going into the dev folder. Then, run `terragrunt plan-all` to first see the results and `terragrunt apply-all` to make it so. Similarly, you can do that from any folder to deploy as many or as few services as you want. Some examples:
+
+6. So...let's actually deploy the hello service. There are a couple options here. Starting from the root folder of the hello-service repo, if you want to deploy all of the dev services for hello you can simply start by going into the dev folder. Then, run `terragrunt plan-all` to first see the results and `terragrunt apply-all` to make it so. Similarly, you can do that from any folder to deploy as many or as few services as you want. Some examples:
 
   ```sh
   # from hello-service repo
@@ -179,6 +180,6 @@ root
   terragrunt plan
   ```
 
-* The world service works exactly the same way, except that it uses a redis cluster as well. Note that this is never defined in any environment variables. This is retrieved directly from the environment state file. The only differences here are the deploy settings, and the common variables to make them match the service name.
+7. The world service works exactly the same way, except that it uses a redis cluster as well. Note that this is never defined in any environment variables. This is retrieved directly from the environment state file. The only differences here are the deploy settings, and the common variables to make them match the service name.
 
-* Last but not least you can destroy elements the same way, by reversing the steps above and using `terragrunt destroy-all` from the appropriate folders.
+8. Last but not least you can destroy elements the same way, by reversing the steps above and using `terragrunt destroy-all` from the appropriate folders.
