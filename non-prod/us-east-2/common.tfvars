@@ -1,0 +1,8 @@
+account_id          = "776609208984"
+profile             = "dcgapi-dev"
+region              = "us-east-2"
+project_name        = "sample-tf"
+env_name            = "non-prod"
+common_state_bucket = "sample-tf-non-prod-state-us-east-2-776609208984"
+env_state_bucket    = "sample-tf-non-prod-state-us-east-2-776609208984"
+keypair             = "consul-cluster-test"
